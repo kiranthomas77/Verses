@@ -1,0 +1,388 @@
+<!--
+FILES INCLUDED IN THIS TEXTDOC (save separately):
+
+1) index.html  (main page - aesthetic & mobile-friendly)
+2) days.json   (static data file with entries for Nov 10–20, 2025)
+
+Save index.html and days.json as separate files in the same folder. The page will fetch days.json if present; otherwise it falls back to the embedded data.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Verse of the Day — Nov 10–20, 2025</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --muted:#9aa4b2;
+      --accent:#7dd3fc; /* soft cyan */
+      --glass: rgba(255,255,255,0.04);
+      color-scheme: dark;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#071127 0%, #07122b 60%);padding:20px;display:flex;align-items:center;justify-content:center}
+    .wrap{width:100%;max-width:980px;margin:0 auto}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#083b4a,#0b2540);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:800}
+    h1{font-size:1.05rem;margin:0;color:#e6f7fb}
+    .subtitle{color:var(--muted);font-size:0.9rem}
+
+    .grid{display:grid;grid-template-columns: 1fr 380px;gap:18px;margin-top:18px}
+    @media (max-width:880px){ .grid{grid-template-columns:1fr} }
+
+    .today-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:18px;border:1px solid var(--glass);box-shadow: 0 10px 30px rgba(2,6,23,0.6);backdrop-filter: blur(6px)}
+    .meta{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:0.88rem}
+    .ref{color:var(--accent);font-weight:700;margin-top:10px;font-size:1.05rem}
+    blockquote{margin:12px 0 0 0;padding-left:14px;border-left:3px solid rgba(125,211,252,0.12);color:#dff6fb}
+    .passage{margin-top:12px;line-height:1.6;color:#d7eef6}
+
+    .side{position:relative}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:14px;border:1px solid var(--glass)}
+    .list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+
+    .day-item{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));border:1px solid rgba(255,255,255,0.02);cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+    .day-item:hover{transform:translateY(-4px);box-shadow:0 10px 30px rgba(2,6,23,0.45)}
+    .date{min-width:84px;font-weight:700;color:#bfefff}
+    .importance{background:linear-gradient(90deg, rgba(125,211,252,0.08), rgba(125,211,252,0.04));padding:6px 8px;border-radius:999px;font-size:0.78rem;color:var(--accent)}
+
+    .controls{display:flex;gap:8px;margin-top:12px}
+    .btn{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#e6f7fb;padding:8px 10px;border-radius:10px;cursor:pointer}
+    .btn.secondary{background:transparent;color:var(--muted)}
+
+    footer{margin-top:16px;color:var(--muted);font-size:0.85rem;text-align:center}
+
+    /* small helper */
+    .small{font-size:0.88rem;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">V</div>
+        <div>
+          <h1>Verse — Nov 10–20, 2025</h1>
+          <div class="subtitle">Daily verse + short reflection • Static • Mobile friendly</div>
+        </div>
+      </div>
+      <div class="small">No login • Works offline</div>
+    </header>
+
+    <div class="grid">
+      <main class="today-card" id="todayCard" aria-live="polite">
+        <div class="meta">
+          <div id="dateLabel">Date</div>
+          <div style="flex:1"></div>
+          <div id="importanceBadge" class="importance" style="display:none"></div>
+        </div>
+
+        <div class="ref" id="ref">Loading…</div>
+        <blockquote id="verseText">Loading verse text…</blockquote>
+        <div class="passage" id="passage">Loading passage…</div>
+
+        <div class="controls">
+          <button class="btn" id="prevBtn">Show days (Nov 10–20)</button>
+          <button class="btn secondary" id="downloadBtn">Download JSON</button>
+        </div>
+      </main>
+
+      <aside class="side">
+        <div class="card" style="position:sticky;top:20px">
+          <div style="font-weight:700;color:#e6f7fb">This week</div>
+          <div class="small" style="margin-top:8px">Tap any day to view it above. The reflections are short and non-authoritative.</div>
+
+          <div class="list" id="previousList" style="margin-top:12px"></div>
+        </div>
+      </aside>
+    </div>
+
+    <footer>
+      Tip: Save the JSON block (inside the HTML comments) as <code>days.json</code> next to <code>index.html</code> to make it easy to edit.
+    </footer>
+  </div>
+
+  <!-- START_DAYS_JSON -->
+  <!-- Save the JSON array below into a file named days.json if you want the content separate. -->
+  <!--
+  [
+    {
+      "date": "2025-11-10",
+      "reference": "Psalm 119:105",
+      "text": "Thy word is a lamp unto my feet, and a light unto my path.",
+      "translation": "KJV",
+      "passage": "Summary: Scripture gives practical direction for daily life. Context: Psalm 119 celebrates the value of God's law as guidance. Application: When choices feel uncertain, look to foundational truths that illuminate the next step.",
+      "importance": "Guidance for daily decisions"
+    },
+    {
+      "date": "2025-11-11",
+      "reference": "Hebrews 11:1",
+      "text": "Now faith is the substance of things hoped for, the evidence of things not seen.",
+      "translation": "KJV",
+      "passage": "Summary: Faith trusts beyond current sight. Context: Hebrews 11 surveys faith-filled examples. Application: In seasons of waiting, lean on steady hope rather than immediate proof.",
+      "importance": "Faith & remembrance (Veterans/Remembrance)"
+    },
+    {
+      "date": "2025-11-12",
+      "reference": "Galatians 5:22-23",
+      "text": "But the fruit of the Spirit is love, joy, peace, longsuffering, gentleness, goodness, faith,\nMeekness, temperance: against such there is no law.",
+      "translation": "KJV",
+      "passage": "Summary: The Spirit cultivates character in believers. Context: Paul contrasts works of the flesh with Spirit fruit. Application: Seek these character traits in everyday relationships instead of quick victories.",
+      "importance": "Character & relationships"
+    },
+    {
+      "date": "2025-11-13",
+      "reference": "Matthew 5:16",
+      "text": "Let your light so shine before men, that they may see your good works, and glorify your Father which is in heaven.",
+      "translation": "KJV",
+      "passage": "Summary: Good deeds point others toward goodness. Context: Part of the Sermon on the Mount teaching about public witness. Application: Simple acts of kindness can make faith visible in everyday life.",
+      "importance": "Be a light in the world"
+    },
+    {
+      "date": "2025-11-14",
+      "reference": "Ephesians 2:8-9",
+      "text": "For by grace are ye saved through faith; and that not of yourselves: it is the gift of God:\nNot of works, lest any man should boast.",
+      "translation": "KJV",
+      "passage": "Summary: Salvation is a gift, not earned by achievement. Context: Paul emphasizes grace over legalistic boasting. Application: Receive humility and gratitude rather than measuring worth by performance.",
+      "importance": "Grace & humility"
+    },
+    {
+      "date": "2025-11-15",
+      "reference": "1 Corinthians 13:4-7",
+      "text": "Charity suffereth long, and is kind; charity envieth not; charity vaunteth not itself, is not puffed up,\nDoth not behave itself unseemly, seeketh not her own, is not easily provoked, thinketh no evil;\nRejoiceth not in iniquity, but rejoiceth in the truth;\nBeareth all things, believeth all things, hopeth all things, endureth all things.",
+      "translation": "KJV",
+      "passage": "Summary: Love is patient, kind, and enduring. Context: Paul's classic passage defining true love. Application: Let these qualities shape how you relate to family and friends today.",
+      "importance": "Love and relationships"
+    },
+    {
+      "date": "2025-11-16",
+      "reference": "Jeremiah 29:11",
+      "text": "For I know the thoughts that I think toward you, saith the LORD, thoughts of peace, and not of evil, to give you an expected end.",
+      "translation": "KJV",
+      "passage": "Summary: God has hopeful plans for the future. Context: Jeremiah's letter encourages exiles with a long-term promise. Application: Trust that setbacks can fit into a broader hopeful story.",
+      "importance": "Hope & future planning"
+    },
+    {
+      "date": "2025-11-17",
+      "reference": "Psalm 46:10",
+      "text": "Be still, and know that I am God: I will be exalted among the nations, I will be exalted in the earth.",
+      "translation": "KJV",
+      "passage": "Summary: Practice stillness to recognize God's sovereignty. Context: A psalm of trust amid chaos. Application: In busy seasons, pause and re-center on what truly matters.",
+      "importance": "Presence & stillness"
+    },
+    {
+      "date": "2025-11-18",
+      "reference": "Colossians 3:23",
+      "text": "And whatsoever ye do, do it heartily, as to the Lord, and not unto men;",
+      "translation": "KJV",
+      "passage": "Summary: Work with wholehearted devotion. Context: Paul gives practical advice for daily conduct. Application: Treat everyday tasks as meaningful contributions, not just chores.",
+      "importance": "Vocation & daily work"
+    },
+    {
+      "date": "2025-11-19",
+      "reference": "James 1:5",
+      "text": "If any of you lack wisdom, let him ask of God, that giveth to all men liberally, and upbraideth not; and it shall be given him.",
+      "translation": "KJV",
+      "passage": "Summary: Ask for wisdom boldly. Context: James encourages practical faith that acts. Application: When unsure, ask for clear guidance and listen patiently for the answer.",
+      "importance": "Seeking wisdom in decisions"
+    },
+    {
+      "date": "2025-11-20",
+      "reference": "Psalm 37:4",
+      "text": "Delight thyself also in the LORD: and he shall give thee the desires of thine heart.",
+      "translation": "KJV",
+      "passage": "Summary: Joyful alignment with God shapes desires. Context: David contrasts trust with anxious striving. Application: Prioritize what aligns with deeper joy, not fleeting wants.",
+      "importance": "Delight & priorities"
+    }
+  ]
+  -->
+  <!-- END_DAYS_JSON -->
+
+  <script>
+    // Embedded fallback data (same as days.json block above) in case days.json is not present.
+    const embeddedData = [
+      {
+        "date": "2025-11-10",
+        "reference": "Psalm 119:105",
+        "text": "Thy word is a lamp unto my feet, and a light unto my path.",
+        "translation": "KJV",
+        "passage": "Summary: Scripture gives practical direction for daily life. Context: Psalm 119 celebrates the value of God's law as guidance. Application: When choices feel uncertain, look to foundational truths that illuminate the next step.",
+        "importance": "Guidance for daily decisions"
+      },
+      {
+        "date": "2025-11-11",
+        "reference": "Hebrews 11:1",
+        "text": "Now faith is the substance of things hoped for, the evidence of things not seen.",
+        "translation": "KJV",
+ "passage": "Summary: Faith trusts beyond current sight. Context: Hebrews 11 surveys faith-filled examples. Application: In seasons of waiting, lean on steady hope rather than immediate proof.",
+        "importance": "Faith & remembrance (Veterans/Remembrance)"
+      },
+      {
+        "date": "2025-11-12",
+        "reference": "Galatians 5:22-23",
+        "text": "But the fruit of the Spirit is love, joy, peace, longsuffering, gentleness, goodness, faith,\nMeekness, temperance: against such there is no law.",
+        "translation": "KJV",
+        "passage": "Summary: The Spirit cultivates character in believers. Context: Paul contrasts works of the flesh with Spirit fruit. Application: Seek these character traits in everyday relationships instead of quick victories.",
+        "importance": "Character & relationships"
+      },
+      {
+        "date": "2025-11-13",
+        "reference": "Matthew 5:16",
+        "text": "Let your light so shine before men, that they may see your good works, and glorify your Father which is in heaven.",
+        "translation": "KJV",
+        "passage": "Summary: Good deeds point others toward goodness. Context: Part of the Sermon on the Mount teaching about public witness. Application: Simple acts of kindness can make faith visible in everyday life.",
+        "importance": "Be a light in the world"
+      },
+      {
+        "date": "2025-11-14",
+        "reference": "Ephesians 2:8-9",
+        "text": "For by grace are ye saved through faith; and that not of yourselves: it is the gift of God:\nNot of works, lest any man should boast.",
+        "translation": "KJV",
+        "passage": "Summary: Salvation is a gift, not earned by achievement. Context: Paul emphasizes grace over legalistic boasting. Application: Receive humility and gratitude rather than measuring worth by performance.",
+        "importance": "Grace & humility"
+      },
+      {
+        "date": "2025-11-15",
+        "reference": "1 Corinthians 13:4-7",
+        "text": "Charity suffereth long, and is kind; charity envieth not; charity vaunteth not itself, is not puffed up,\nDoth not behave itself unseemly, seeketh not her own, is not easily provoked, thinketh no evil;\nRejoiceth not in iniquity, but rejoiceth in the truth;\nBeareth all things, believeth all things, hopeth all things, endureth all things.",
+        "translation": "KJV",
+        "passage": "Summary: Love is patient, kind, and enduring. Context: Paul's classic passage defining true love. Application: Let these qualities shape how you relate to family and friends today.",
+        "importance": "Love and relationships"
+      },
+      {
+        "date": "2025-11-16",
+        "reference": "Jeremiah 29:11",
+        "text": "For I know the thoughts that I think toward you, saith the LORD, thoughts of peace, and not of evil, to give you an expected end.",
+        "translation": "KJV",
+        "passage": "Summary: God has hopeful plans for the future. Context: Jeremiah's letter encourages exiles with a long-term promise. Application: Trust that setbacks can fit into a broader hopeful story.",
+        "importance": "Hope & future planning"
+      },
+      {
+        "date": "2025-11-17",
+        "reference": "Psalm 46:10",
+        "text": "Be still, and know that I am God: I will be exalted among the nations, I will be exalted in the earth.",
+        "translation": "KJV",
+        "passage": "Summary: Practice stillness to recognize God's sovereignty. Context: A psalm of trust amid chaos. Application: In busy seasons, pause and re-center on what truly matters.",
+        "importance": "Presence & stillness"
+      },
+      {
+        "date": "2025-11-18",
+        "reference": "Colossians 3:23",
+        "text": "And whatsoever ye do, do it heartily, as to the Lord, and not unto men;",
+        "translation": "KJV",
+        "passage": "Summary: Work with wholehearted devotion. Context: Paul gives practical advice for daily conduct. Application: Treat everyday tasks as meaningful contributions, not just chores.",
+        "importance": "Vocation & daily work"
+      },
+      {
+        "date": "2025-11-19",
+        "reference": "James 1:5",
+        "text": "If any of you lack wisdom, let him ask of God, that giveth to all men liberally, and upbraideth not; and it shall be given him.",
+        "translation": "KJV",
+        "passage": "Summary: Ask for wisdom boldly. Context: James encourages practical faith that acts. Application: When unsure, ask for clear guidance and listen patiently for the answer.",
+        "importance": "Seeking wisdom in decisions"
+      },
+      {
+        "date": "2025-11-20",
+        "reference": "Psalm 37:4",
+        "text": "Delight thyself also in the LORD: and he shall give thee the desires of thine heart.",
+        "translation": "KJV",
+        "passage": "Summary: Joyful alignment with God shapes desires. Context: David contrasts trust with anxious striving. Application: Prioritize what aligns with deeper joy, not fleeting wants.",
+        "importance": "Delight & priorities"
+      }
+    ];
+
+    // Utility
+    function isoToday() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function prettyDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+    }
+
+    function selectEntry(data, iso) {
+      const map = {};
+      data.forEach(x=>map[x.date]=x);
+      if (map[iso]) return map[iso];
+      const dates = data.map(x=>x.date).sort();
+      const earlier = dates.filter(d=>d <= iso);
+      if (earlier.length) return map[earlier[earlier.length-1]];
+      return data[0];
+    }
+
+    async function loadData() {
+      try {
+        const resp = await fetch('days.json', {cache:'no-store'});
+        if (!resp.ok) throw new Error('no days.json');
+        const d = await resp.json();
+        return d;
+      } catch (err) {
+        return embeddedData;
+      }
+    }
+
+    function renderMain(entry) {
+      document.getElementById('dateLabel').textContent = prettyDate(entry.date);
+      const imp = document.getElementById('importanceBadge');
+      if (entry.importance) { imp.style.display='inline-block'; imp.textContent = entry.importance; }
+      else imp.style.display='none';
+      document.getElementById('ref').textContent = `${entry.reference}${entry.translation? ' ('+entry.translation+')':''}`;
+      document.getElementById('verseText').textContent = entry.text;
+      document.getElementById('passage').textContent = entry.passage || '(No passage provided.)';
+    }
+
+    function renderList(data) {
+      const listEl = document.getElementById('previousList');
+      listEl.innerHTML = '';
+      const sorted = [...data].sort((a,b)=> a.date.localeCompare(b.date));
+      sorted.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'day-item';
+        el.innerHTML = `<div class="date">${prettyDate(item.date)}</div>
+                        <div style="flex:1">
+                          <div style="font-weight:700;color:#e6f7fb">${item.reference} ${item.translation? '('+item.translation+')':''}</div>
+                          <div style="margin-top:6px;color:var(--muted);">${item.text}</div>
+                          <div style="margin-top:8px" class="importance small"><strong>Why:</strong> ${item.importance||'—'}</div>
+                        </div>`;
+        el.addEventListener('click',()=>{ renderMain(item); window.scrollTo({top:0,behavior:'smooth'}) });
+        listEl.appendChild(el);
+      });
+    }
+
+    (async function init(){
+      const data = await loadData();
+      renderList(data);
+      const todayIso = isoToday();
+      const entry = selectEntry(data, todayIso);
+      renderMain(entry);
+
+      document.getElementById('prevBtn').addEventListener('click', ()=>{
+        const el = document.getElementById('previousList');
+        el.style.display = el.style.display === 'none' || el.style.display === '' ? 'flex' : 'none';
+      });
+
+      document.getElementById('downloadBtn').addEventListener('click', ()=>{
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'days.json';
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      });
+
+    })();
+  </script>
+</body>
+</html>
